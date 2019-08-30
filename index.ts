@@ -4,7 +4,7 @@ import {google} from 'googleapis'
 
 
 // If modifying these scopes, delete token.json.
-const SCOPES = ['https://www.googleapis.com/auth/documents'];
+const SCOPES = ['https://www.googleapis.com/auth/documents', 'https://www.googleapis.com/auth/drive'];
 // The file token.json stores the user's access and refresh tokens, and is
 // created automatically when the authorization flow completes for the first
 // time.
@@ -14,9 +14,12 @@ const TOKEN_PATH = 'token.json';
 fs.readFile('credentials.json', (err, content) => {
   if (err) return console.log('Error loading client secret file:', err);
   // Authorize a client with credentials, then call the Google Docs API.
-  authorize(JSON.parse(content.toString()), (auth) => {
+  authorize(JSON.parse(content.toString()), async (auth) => {
     printDocTitle(auth)
-    createDoc(auth, `Test API - ${Date.now()}`)
+    const doc = await createDoc(auth, `Test API - ${Date.now()}`)
+    console.log('doc', doc)
+    const clone = await copyDoc(auth, doc.documentId)
+    console.log('cloned', clone)
   });
 });
 
@@ -88,31 +91,29 @@ function printDocTitle(auth) {
 /*
 document.create only accepts Title
  */
-function createDoc (auth, docTitle) {
+async function createDoc (auth, docTitle) {
   const docs = google.docs({version: 'v1', auth});
 
-  docs.documents.create({
+  const response = await docs.documents.create({
     requestBody: {
       title: docTitle,
     }
-  }, (err, response) => {
-    console.log('err', err)
-
-    console.log(response)
   })
+
+  return response.data
 }
 
-function copyDoc (auth, documentId) {
+async function copyDoc (auth, documentId) {
+  const drive = google.drive({version: 'v3', auth});
   const copyTitle = "Copy Title";
 
-  let request = {
-    name: copyTitle,
-  };
-
-  this.driveService.files.copy({
+  const response = await drive.files.copy({
     fileId: documentId,
-    resource: request,
-  }, (err, driveResponse) => {
-    let documentCopyId = driveResponse.id;
+    requestBody: {
+      name: copyTitle + ' - ' + Date.now(),
+
+    }
   });
+
+  return response.data
 }
