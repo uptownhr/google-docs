@@ -15,11 +15,14 @@ fs.readFile('credentials.json', (err, content) => {
   if (err) return console.log('Error loading client secret file:', err);
   // Authorize a client with credentials, then call the Google Docs API.
   authorize(JSON.parse(content.toString()), async (auth) => {
-    printDocTitle(auth)
+    await docToPDF(auth, '1_umZmyJUil3mZtY4HvEZe_Pik44FZ5zo5mq-GweUym8')
+
+
+    /*printDocTitle(auth)
     const doc = await createDoc(auth, `Test API - ${Date.now()}`)
     console.log('doc', doc)
     const clone = await copyDoc(auth, doc.documentId)
-    console.log('cloned', clone)
+    console.log('cloned', clone)*/
   });
 });
 
@@ -116,4 +119,41 @@ async function copyDoc (auth, documentId) {
   });
 
   return response.data
+}
+
+interface driveFilesExportArrayBuffer {
+  config: object;
+  data: ArrayBuffer;
+}
+
+async function docToPDF (auth, documentId) {
+  const drive = google.drive({version: 'v3', auth});
+  const dest = fs.createWriteStream('/tmp/resume.pdf');
+
+  const test :any = await drive.files.export({
+    fileId: documentId,
+    mimeType: 'application/pdf'
+  }, {
+    responseType: 'arraybuffer'
+  })
+
+  const arraybuffer: ArrayBuffer = test.data
+
+  console.log(Object.keys(test))
+  console.log(test.config, test.headers, test.status, test.request)
+  console.log(test.data)
+
+  fs.writeFile('test.pdf', new Buffer(arraybuffer), err => {
+    console.log(err)
+  })
+
+  /*return new Promise((resolve, reject) => {
+    drive.files.export({
+      fileId: documentId,
+      mimeType: 'application/pdf'
+    })
+      .on('end', resolve)
+      .on('error', reject)
+      .pipe(dest);
+  })*/
 }
